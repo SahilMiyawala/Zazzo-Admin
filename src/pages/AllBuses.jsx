@@ -1,24 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Filter, Edit, Trash2, Eye, Bus, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus, Search, Filter, Edit, Trash2, Eye, Bus, ChevronLeft, ChevronRight,
+} from "lucide-react";
 
 const AllBuses = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [newBus, setNewBus] = useState({
-    busNumber: "",
-    capacity: "",
-    driverName: "",
-    driverPhone: "",
-    route: "",
+    busNumber: "", capacity: "", driverName: "", driverPhone: "", route: "",
   });
   const [editingBus, setEditingBus] = useState({
-    _id: "",
-    busNumber: "",
-    capacity: "",
-    driverName: "",
-    driverPhone: "",
-    route: "",
+    _id: "", busNumber: "", capacity: "", driverName: "", driverPhone: "", route: "",
   });
   const [buses, setBuses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,38 +19,56 @@ const AllBuses = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalBuses, setTotalBuses] = useState(0);
   const [limit, setLimit] = useState(10);
+  const [vendorId, setVendorId] = useState(null);
+  const [token, setToken] = useState(null);
 
-  // Get vendorId from localStorage
-  const vendorId = localStorage.getItem("vendorId") || "686fa93c99634da41589ec8f";
-  const token = localStorage.getItem("token");
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const storedToken = localStorage.getItem("token");
+
+    if (user && storedToken) {
+      setVendorId(user._id);
+      setToken(storedToken);
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (vendorId && token) {
+      fetchBuses();
+    }
+  }, [vendorId, token]);
 
   const fetchBuses = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://145.223.20.218:2002/api/vendor/getbuses/${vendorId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch buses");
-      }
-      
+      const response = await fetch(
+        `http://145.223.20.218:2002/api/vendor/getbuses/${vendorId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch buses");
+
       const data = await response.json();
-      setBuses(data.data || []);
-      setTotalBuses(data.data ? data.data.length : 0);
-      setTotalPages(Math.ceil((data.data ? data.data.length : 0) / limit));
-      setLoading(false);
+
+      // ✅ Fix: Access the actual array inside data.buses
+      const busesData = Array.isArray(data.data?.buses) ? data.data.buses : [];
+
+      setBuses(busesData);
+      setTotalBuses(busesData.length);
+      setTotalPages(Math.ceil(busesData.length / limit));
     } catch (error) {
       console.error("Error fetching buses:", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchBuses();
-  }, [vendorId, token]);
 
   const addBus = async (busData) => {
     try {
@@ -70,9 +81,7 @@ const AllBuses = () => {
         body: JSON.stringify({ ...busData, vendorId }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to add bus");
-      }
+      if (!response.ok) throw new Error("Failed to add bus");
 
       await fetchBuses();
       return await response.json();
@@ -93,9 +102,7 @@ const AllBuses = () => {
         body: JSON.stringify(busData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update bus");
-      }
+      if (!response.ok) throw new Error("Failed to update bus");
 
       await fetchBuses();
       return await response.json();
@@ -114,9 +121,7 @@ const AllBuses = () => {
         },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete bus");
-      }
+      if (!response.ok) throw new Error("Failed to delete bus");
 
       await fetchBuses();
     } catch (error) {
@@ -134,9 +139,7 @@ const AllBuses = () => {
         },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to toggle bus status");
-      }
+      if (!response.ok) throw new Error("Failed to toggle bus status");
 
       await fetchBuses();
     } catch (error) {
@@ -154,8 +157,9 @@ const AllBuses = () => {
     return status ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
   };
 
+  // ✅ filter is now safe because we ensured buses is always an array
   const filteredBuses = buses.filter((bus) => {
-    const matchesSearch = 
+    const matchesSearch =
       bus.busNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bus.driverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bus.route?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -179,10 +183,38 @@ const AllBuses = () => {
     setCurrentPage(1);
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  if (!vendorId || !token) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 p-4">
+        <div className="bg-white rounded-xl shadow-md p-8 max-w-md w-full text-center">
+          <div className="bg-red-100 rounded-full p-3 w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">
+            You need to be logged in to access this page. Please sign in to manage your buses.
+          </p>
+          <button
+            onClick={() => window.location.href = "/login"}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <span className="ml-4 text-lg text-gray-700">Loading buses...</span>
+      </div>
+    );
+  }
   return (
     <div className="space-y-6 animate-slide-in">
       {/* Header with stats cards and add button */}
@@ -197,16 +229,14 @@ const AllBuses = () => {
           ].map((card, i) => (
             <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <div className="flex items-center">
-                <div className={`p-2 ${
-                  card.color === 'blue' ? 'bg-blue-100' : 
-                  card.color === 'green' ? 'bg-green-100' : 
-                  card.color === 'red' ? 'bg-red-100' : 'bg-purple-100'
-                } rounded-xl`}>
-                  <Bus className={`w-6 h-6 ${
-                    card.color === 'blue' ? 'text-blue-600' : 
-                    card.color === 'green' ? 'text-green-600' : 
-                    card.color === 'red' ? 'text-red-600' : 'text-purple-600'
-                  }`} />
+                <div className={`p-2 ${card.color === 'blue' ? 'bg-blue-100' :
+                    card.color === 'green' ? 'bg-green-100' :
+                      card.color === 'red' ? 'bg-red-100' : 'bg-purple-100'
+                  } rounded-xl`}>
+                  <Bus className={`w-6 h-6 ${card.color === 'blue' ? 'text-blue-600' :
+                      card.color === 'green' ? 'text-green-600' :
+                        card.color === 'red' ? 'text-red-600' : 'text-purple-600'
+                    }`} />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">{card.label}</p>
@@ -266,7 +296,7 @@ const AllBuses = () => {
                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Capacity</th>
                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Driver Name</th>
                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Driver Phone</th>
-                <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Route</th>
+                {/* <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Route</th> */}
                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Change Status</th>
                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Status</th>
                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">Actions</th>
@@ -294,15 +324,26 @@ const AllBuses = () => {
                     {bus.capacity || "N/A"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                    {bus.driverName || "N/A"}
+                    <div className="text-sm text-gray-900">
+                      {bus.driver?.name || "N/A"}
+                      {bus.driver?.email && (
+                        <div className="text-xs text-gray-500">  {bus.driver?.email || "N/A"}</div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                    {bus.driverPhone || "N/A"}
+                    <div className="text-sm text-gray-900">
+                      {bus.conductor?.name || "N/A"}
+                      {bus.conductor?.email && (
+                        <div className="text-xs text-gray-500">  {bus.conductor?.email || "N/A"}</div>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+             
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                     {bus.route || "N/A"}
-                  </td>
-                  
+                  </td> */}
+
                   <td className="px-8 py-4 whitespace-nowrap text-center">
                     <button
                       onClick={async () => {
@@ -312,14 +353,12 @@ const AllBuses = () => {
                           alert("Failed to change bus status.");
                         }
                       }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        bus.isActive ? 'bg-green-600' : 'bg-gray-200'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${bus.isActive ? 'bg-green-600' : 'bg-gray-200'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          bus.isActive ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${bus.isActive ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </button>
                   </td>
@@ -333,8 +372,8 @@ const AllBuses = () => {
                       <button className="text-blue-600 hover:text-blue-900">
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button 
-                        onClick={() => handleEditClick(bus)} 
+                      <button
+                        onClick={() => handleEditClick(bus)}
                         className="text-green-600 hover:text-green-900"
                       >
                         <Edit className="w-4 h-4" />
@@ -366,9 +405,9 @@ const AllBuses = () => {
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-600">Rows per page:</span>
-          <select 
-            value={limit} 
-            onChange={handleLimitChange} 
+          <select
+            value={limit}
+            onChange={handleLimitChange}
             className="border border-gray-300 rounded-md px-2 py-1 text-sm"
           >
             <option value={5}>5</option>
@@ -382,12 +421,11 @@ const AllBuses = () => {
             Showing {(currentPage - 1) * limit + 1} to {Math.min(currentPage * limit, filteredBuses.length)} of {filteredBuses.length} entries
           </span>
           <div className="flex space-x-1">
-            <button 
-              onClick={() => handlePageChange(currentPage - 1)} 
-              disabled={currentPage === 1} 
-              className={`p-1 rounded-md ${
-                currentPage === 1 ? "text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"
-              }`}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`p-1 rounded-md ${currentPage === 1 ? "text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"
+                }`}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -404,23 +442,21 @@ const AllBuses = () => {
                 pageNum = currentPage - 2 + i;
               }
               return (
-                <button 
-                  key={pageNum} 
-                  onClick={() => handlePageChange(pageNum)} 
-                  className={`w-8 h-8 rounded-md ${
-                    currentPage === pageNum ? "bg-blue-500 text-white" : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`w-8 h-8 rounded-md ${currentPage === pageNum ? "bg-blue-500 text-white" : "text-gray-700 hover:bg-gray-100"
+                    }`}
                 >
                   {pageNum}
                 </button>
               );
             })}
-            <button 
-              onClick={() => handlePageChange(currentPage + 1)} 
-              disabled={currentPage === Math.ceil(filteredBuses.length / limit)} 
-              className={`p-1 rounded-md ${
-                currentPage === Math.ceil(filteredBuses.length / limit) ? "text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"
-              }`}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === Math.ceil(filteredBuses.length / limit)}
+              className={`p-1 rounded-md ${currentPage === Math.ceil(filteredBuses.length / limit) ? "text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"
+                }`}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -434,45 +470,45 @@ const AllBuses = () => {
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Add New Bus</h2>
             <div className="space-y-4">
-              <input 
-                type="text" 
-                placeholder="Bus Number" 
-                value={newBus.busNumber} 
-                onChange={(e) => setNewBus({ ...newBus, busNumber: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Bus Number"
+                value={newBus.busNumber}
+                onChange={(e) => setNewBus({ ...newBus, busNumber: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="number" 
-                placeholder="Capacity" 
-                value={newBus.capacity} 
-                onChange={(e) => setNewBus({ ...newBus, capacity: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="number"
+                placeholder="Capacity"
+                value={newBus.capacity}
+                onChange={(e) => setNewBus({ ...newBus, capacity: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="text" 
-                placeholder="Driver Name" 
-                value={newBus.driverName} 
-                onChange={(e) => setNewBus({ ...newBus, driverName: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Driver Name"
+                value={newBus.driverName}
+                onChange={(e) => setNewBus({ ...newBus, driverName: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="text" 
-                placeholder="Driver Phone" 
-                value={newBus.driverPhone} 
-                onChange={(e) => setNewBus({ ...newBus, driverPhone: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Driver Phone"
+                value={newBus.driverPhone}
+                onChange={(e) => setNewBus({ ...newBus, driverPhone: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="text" 
-                placeholder="Route" 
-                value={newBus.route} 
-                onChange={(e) => setNewBus({ ...newBus, route: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Route"
+                value={newBus.route}
+                onChange={(e) => setNewBus({ ...newBus, route: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div className="mt-6 flex justify-end space-x-3">
-              <button 
-                onClick={() => setIsModalOpen(false)} 
+              <button
+                onClick={() => setIsModalOpen(false)}
                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
               >
                 Cancel
@@ -508,45 +544,45 @@ const AllBuses = () => {
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Edit Bus</h2>
             <div className="space-y-4">
-              <input 
-                type="text" 
-                placeholder="Bus Number" 
-                value={editingBus.busNumber} 
-                onChange={(e) => setEditingBus({ ...editingBus, busNumber: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Bus Number"
+                value={editingBus.busNumber}
+                onChange={(e) => setEditingBus({ ...editingBus, busNumber: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="number" 
-                placeholder="Capacity" 
-                value={editingBus.capacity} 
-                onChange={(e) => setEditingBus({ ...editingBus, capacity: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="number"
+                placeholder="Capacity"
+                value={editingBus.capacity}
+                onChange={(e) => setEditingBus({ ...editingBus, capacity: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="text" 
-                placeholder="Driver Name" 
-                value={editingBus.driverName} 
-                onChange={(e) => setEditingBus({ ...editingBus, driverName: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Driver Name"
+                value={editingBus.driverName}
+                onChange={(e) => setEditingBus({ ...editingBus, driverName: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="text" 
-                placeholder="Driver Phone" 
-                value={editingBus.driverPhone} 
-                onChange={(e) => setEditingBus({ ...editingBus, driverPhone: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Driver Phone"
+                value={editingBus.driverPhone}
+                onChange={(e) => setEditingBus({ ...editingBus, driverPhone: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <input 
-                type="text" 
-                placeholder="Route" 
-                value={editingBus.route} 
-                onChange={(e) => setEditingBus({ ...editingBus, route: e.target.value })} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              <input
+                type="text"
+                placeholder="Route"
+                value={editingBus.route}
+                onChange={(e) => setEditingBus({ ...editingBus, route: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div className="mt-6 flex justify-end space-x-3">
-              <button 
-                onClick={() => setIsEditModalOpen(false)} 
+              <button
+                onClick={() => setIsEditModalOpen(false)}
                 className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
               >
                 Cancel

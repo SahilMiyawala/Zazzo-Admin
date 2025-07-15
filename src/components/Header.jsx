@@ -24,6 +24,8 @@ const Header = ({ onMenuClick }) => {
     "/tracking": { title: "Live Tracking", description: "Track your buses in real-time and monitor their progress." },
     "/vendor": { title: "Vendor Management", description: "Manage vendors and their details." },
     "/allbuses": { title: "All Buses", description: "View and manage all buses in the fleet." },
+    "/schoollist": { title: "School List", description: "View and manage all school and students in the fleet." },
+    "/SchoolsStudentlist": { title: "All Buses", description: "View and manage all buses in the fleet." },
   }
 
   const currentPage = pageTitles[location.pathname] || { title: "", description: "" }

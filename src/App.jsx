@@ -21,6 +21,7 @@ import Profile from "./pages/Profile"
 import "./index.css"
 import VendorManagement from "./pages/VendorManagement"
 import AllBuses from "./pages/AllBuses"
+import SchoolsStudentlist from "./pages/SchoolsStudentlist"
 
 // Protected Route Wrapper
 const ProtectedRoute = () => {
@@ -55,6 +56,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="TEST" element={<TEST />} />
             <Route path="allbuses" element={<AllBuses />} />
+            <Route path="SchoolsStudentlist" element={<SchoolsStudentlist />} />
           </Route>
         </Route>
       </Routes>

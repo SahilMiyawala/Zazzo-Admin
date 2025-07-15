@@ -29,6 +29,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { icon: Users, label: "Students Management", path: "/addStudents" },
     { icon: Users, label: "Route Management", path: "/routes" },
     { icon: Users, label: "Live Tracking", path: "/tracking" },
+    
   ]
 
   // School Admin specific menu items
@@ -36,6 +37,9 @@ const Sidebar = ({ isOpen, onClose }) => {
     { icon: Users, label: "Route Management", path: "/routes" },
     { icon: Users, label: "Live Tracking", path: "/tracking" },
     { icon: Users, label: "All Buses", path: "/allbuses" },
+    { icon: FileText, label: "School List", path: "/schoollist" },
+    
+    
   ]
 
   // System Admin specific menu items
@@ -45,7 +49,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { icon: Map, label: "Route Management", path: "/routes" },
     { icon: MapPin, label: "Live Tracking", path: "/tracking" },
     { icon: FileText, label: "Reports", path: "/reports" },
-    { icon: FileText, label: "School List", path: "/schoollist" },
+    // { icon: FileText, label: "School List", path: "/schoollist" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ]
 
@@ -130,18 +134,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </nav>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-0">
-          <div className="bg-gradient-to-r text-secondary-500 bg-primary-500 rounded-xl p-4 text-center">
-            <p className="text-sm font-bold">ZZAZO Admin Panel</p>
-            <p className="text-xs opacity-80 font-bold">Version 1.0.0</p>
-            {userData?.role === "SYSTEM_ADMIN" && (
-              <p className="text-xs mt-1 font-bold bg-white text-primary-500 rounded-full py-1">System Admin</p>
-            )}
-            {userData?.role === "SCHOOL_ADMIN" && (
-              <p className="text-xs mt-1 font-bold bg-white text-primary-500 rounded-full py-1">School Admin</p>
-            )}
-          </div>
-        </div>
+        
       </div>
     </>
   )
